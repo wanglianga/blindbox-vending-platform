@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+target/
+**/target/
+build/
+**/build/
+
+# Logs
+*.log
+logs/
+
+# Local env
+.env
+.env.local
+.env.*.local
+
+# Caches and temporary files
+.cache/
+.temp/
+tmp/
+temp/
+.playwright-cli/
+playwright-report/
+test-results/
+coverage/
+
+# IDE and OS files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# External completion markers
+.done

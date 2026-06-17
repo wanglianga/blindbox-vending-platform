@@ -1,0 +1,58 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: blindbox-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: blindbox123
+      MYSQL_DATABASE: blindbox
+      MYSQL_USER: blindbox
+      MYSQL_PASSWORD: blindbox123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./backend/sql:/docker-entrypoint-initdb.d
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - blindbox-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: blindbox-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/blindbox?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: blindbox
+      SPRING_DATASOURCE_PASSWORD: blindbox123
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - blindbox-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: blindbox-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - blindbox-network
+
+volumes:
+  mysql-data:
+
+networks:
+  blindbox-network:
+    driver: bridge
