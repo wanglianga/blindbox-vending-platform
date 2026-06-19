@@ -56,6 +56,18 @@ const routes = [
         meta: { title: '用户管理', icon: 'User', roles: ['OPERATOR'] }
       },
       {
+        path: 'machine-migration',
+        name: 'MachineMigration',
+        component: () => import('@/views/operator/MachineMigration.vue'),
+        meta: { title: '点位迁移管理', icon: 'LocationFilled', roles: ['OPERATOR'] }
+      },
+      {
+        path: 'segment-revenue',
+        name: 'SegmentRevenue',
+        component: () => import('@/views/operator/Revenue.vue'),
+        meta: { title: '分段收益结算', icon: 'Money', roles: ['OPERATOR'] }
+      },
+      {
         path: 'my-series',
         name: 'MySeries',
         component: () => import('@/views/supplier/MySeries.vue'),
@@ -72,6 +84,12 @@ const routes = [
         name: 'RevenueSupplier',
         component: () => import('@/views/supplier/Revenue.vue'),
         meta: { title: '收益统计', icon: 'Money', roles: ['SUPPLIER'] }
+      },
+      {
+        path: 'migration-inventory',
+        name: 'MigrationInventory',
+        component: () => import('@/views/supplier/MigrationInventory.vue'),
+        meta: { title: '库存迁移查看', icon: 'Box', roles: ['SUPPLIER'] }
       },
       {
         path: 'mall-machines',
@@ -132,6 +150,18 @@ const routes = [
         name: 'ProbabilityQuery',
         component: () => import('@/views/cs/Probability.vue'),
         meta: { title: '概率查询', icon: 'PieChart', roles: ['CUSTOMER_SERVICE'] }
+      },
+      {
+        path: 'stuck-handle-cs',
+        name: 'StuckHandleCs',
+        component: () => import('@/views/cs/StuckHandle.vue'),
+        meta: { title: '卡货退款判断', icon: 'WarningFilled', roles: ['CUSTOMER_SERVICE'] }
+      },
+      {
+        path: 'inventory-correction',
+        name: 'InventoryCorrection',
+        component: () => import('@/views/cs/InventoryCorrection.vue'),
+        meta: { title: '库存修正记录', icon: 'Refresh', roles: ['CUSTOMER_SERVICE'] }
       }
     ]
   }

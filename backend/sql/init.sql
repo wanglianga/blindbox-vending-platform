@@ -456,3 +456,142 @@ INSERT INTO revenue_share (id, order_id, order_no, total_amount, mall_commission
 INSERT INTO cs_ticket (id, ticket_no, user_phone, order_id, order_no, ticket_type, title, description, status, priority) VALUES
 (1, 'TK20240115001', '13912345678', 3, 'PO2024011500003', 'NO_SHIP', '支付成功但未出货', '用户支付后机器卡货，未出货，要求退款', 'PROCESSING', 'HIGH'),
 (2, 'TK20240115002', '13887654321', NULL, NULL, 'PROBABILITY_QUESTION', '质疑隐藏款概率', '用户连续抽了20个都没中隐藏款，质疑概率是否真实', 'OPEN', 'NORMAL');
+
+-- 卡货处理记录表
+CREATE TABLE IF NOT EXISTS stuck_handle_record (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    record_no VARCHAR(64) NOT NULL UNIQUE COMMENT '处理记录编号',
+    ticket_id BIGINT COMMENT '关联工单ID',
+    ticket_no VARCHAR(64) COMMENT '关联工单号',
+    order_id BIGINT COMMENT '关联订单ID',
+    order_no VARCHAR(64) COMMENT '关联订单号',
+    machine_id BIGINT COMMENT '机器ID',
+    machine_code VARCHAR(64) COMMENT '机器编号',
+    grid_no INT COMMENT '格口号',
+    sku_id BIGINT COMMENT 'SKU ID',
+    sku_name VARCHAR(128) COMMENT 'SKU名称',
+    pay_flow_checked VARCHAR(32) COMMENT '支付流水核查结果: NORMAL-正常, ABNORMAL-异常',
+    motor_status_checked VARCHAR(32) COMMENT '电机状态核查结果: NORMAL-正常, FAULT-故障',
+    sensor_status_checked VARCHAR(32) COMMENT '传感器状态核查结果: NORMAL-正常, FAULT-故障',
+    inventory_change_checked VARCHAR(32) COMMENT '库存变化核查结果: NORMAL-正常, ABNORMAL-异常',
+    monitor_photo_checked VARCHAR(32) COMMENT '监控照片核查结果: NORMAL-正常, ABNORMAL-异常',
+    check_remark TEXT COMMENT '核查备注',
+    handle_decision VARCHAR(32) COMMENT '处理决定: REFUND-退款, REISSUE-补发, REPAIR-维修',
+    refund_amount DECIMAL(10,2) COMMENT '退款金额',
+    reissue_sku_id BIGINT COMMENT '补发SKU ID',
+    reissue_grid_no VARCHAR(32) COMMENT '补发出货格口',
+    repair_content TEXT COMMENT '维修内容',
+    status VARCHAR(32) DEFAULT 'PENDING_REPAIR' COMMENT '状态: PENDING_REPAIR-待维修确认, COMPLETED-已完成',
+    cs_handler_id BIGINT COMMENT '客服处理人ID',
+    handle_time DATETIME COMMENT '处理时间',
+    repairer_id BIGINT COMMENT '维修人员ID',
+    repairer_confirm_result VARCHAR(32) COMMENT '维修确认结果: ITEM_STILL_IN_GRID-实物仍在, REPAIRED-已修复, ITEM_LOST-物品丢失',
+    repairer_confirm_time DATETIME COMMENT '维修确认时间',
+    inventory_correction_id BIGINT COMMENT '库存修正记录ID',
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted TINYINT DEFAULT 0,
+    INDEX idx_ticket_id (ticket_id),
+    INDEX idx_order_id (order_id),
+    INDEX idx_machine_id (machine_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='卡货处理记录表';
+
+-- 库存修正记录表
+CREATE TABLE IF NOT EXISTS inventory_correction (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    correction_no VARCHAR(64) NOT NULL UNIQUE COMMENT '修正记录编号',
+    stuck_record_id BIGINT COMMENT '关联卡货处理记录ID',
+    stuck_record_no VARCHAR(64) COMMENT '关联卡货处理记录编号',
+    machine_id BIGINT COMMENT '机器ID',
+    machine_code VARCHAR(64) COMMENT '机器编号',
+    grid_no INT COMMENT '格口号',
+    sku_id BIGINT COMMENT 'SKU ID',
+    sku_name VARCHAR(128) COMMENT 'SKU名称',
+    before_inventory INT COMMENT '修正前库存',
+    after_inventory INT COMMENT '修正后库存',
+    correction_qty INT COMMENT '修正数量',
+    before_revenue DECIMAL(10,2) COMMENT '修正前收益',
+    after_revenue DECIMAL(10,2) COMMENT '修正后收益',
+    correction_revenue DECIMAL(10,2) COMMENT '修正收益',
+    correction_type VARCHAR(32) COMMENT '修正类型: REVERSE_CORRECTION-反向修正',
+    reason TEXT COMMENT '修正原因',
+    operator_id BIGINT COMMENT '操作人ID',
+    operate_time DATETIME COMMENT '操作时间',
+    status VARCHAR(32) DEFAULT 'COMPLETED' COMMENT '状态: PENDING-待处理, COMPLETED-已完成',
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted TINYINT DEFAULT 0,
+    INDEX idx_machine_id (machine_id),
+    INDEX idx_sku_id (sku_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='库存修正记录表';
+
+-- 点位迁移记录表
+CREATE TABLE IF NOT EXISTS machine_migration (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    migration_no VARCHAR(64) NOT NULL UNIQUE COMMENT '迁移单号',
+    machine_id BIGINT NOT NULL COMMENT '机器ID',
+    machine_code VARCHAR(64) NOT NULL COMMENT '机器编号',
+    machine_name VARCHAR(128) COMMENT '机器名称',
+    old_mall_id BIGINT NOT NULL COMMENT '原商场ID',
+    old_mall_name VARCHAR(128) COMMENT '原商场名称',
+    old_location_detail VARCHAR(255) COMMENT '原位置描述',
+    old_commission_rate DECIMAL(5,2) COMMENT '原扣点比例(%)',
+    new_mall_id BIGINT NOT NULL COMMENT '新商场ID',
+    new_mall_name VARCHAR(128) COMMENT '新商场名称',
+    new_location_detail VARCHAR(255) COMMENT '新位置描述',
+    new_commission_rate DECIMAL(5,2) NOT NULL COMMENT '新扣点比例(%)',
+    migration_reason VARCHAR(255) NOT NULL COMMENT '迁移原因: MALL_REQUEST-商场要求, POWER_CONSTRUCTION-断电施工, FLOOR_ADJUST-楼层调整, OTHER-其他',
+    migration_start_time DATETIME NOT NULL COMMENT '迁移开始时间',
+    migration_end_time DATETIME COMMENT '迁移完成时间',
+    downtime_minutes INT DEFAULT 0 COMMENT '停机时长(分钟)',
+    downtime_loss DECIMAL(10,2) DEFAULT 0.00 COMMENT '停机损失金额',
+    loss_remark TEXT COMMENT '损失说明',
+    total_inventory_before INT DEFAULT 0 COMMENT '迁移前总库存',
+    total_inventory_after INT DEFAULT 0 COMMENT '迁移后总库存',
+    transferred_inventory INT DEFAULT 0 COMMENT '已转移库存',
+    lost_inventory INT DEFAULT 0 COMMENT '丢失库存',
+    inventory_transfer_status VARCHAR(32) DEFAULT 'PENDING' COMMENT '库存转移状态: PENDING-待转移, COMPLETE-全部转移, PARTIAL-部分转移',
+    status VARCHAR(32) DEFAULT 'IN_PROGRESS' COMMENT '状态: IN_PROGRESS-进行中, COMPLETED-已完成, CANCELLED-已取消',
+    operator_id BIGINT COMMENT '操作人ID',
+    operator_name VARCHAR(64) COMMENT '操作人姓名',
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted TINYINT DEFAULT 0,
+    INDEX idx_machine_id (machine_id),
+    INDEX idx_old_mall_id (old_mall_id),
+    INDEX idx_new_mall_id (new_mall_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='点位迁移记录表';
+
+-- 迁移库存明细表
+CREATE TABLE IF NOT EXISTS migration_inventory_detail (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    migration_id BIGINT NOT NULL COMMENT '迁移记录ID',
+    migration_no VARCHAR(64) NOT NULL COMMENT '迁移单号',
+    sku_id BIGINT NOT NULL COMMENT 'SKU ID',
+    sku_name VARCHAR(128) COMMENT 'SKU名称',
+    sku_code VARCHAR(64) COMMENT 'SKU编码',
+    series_id BIGINT COMMENT '系列ID',
+    series_name VARCHAR(128) COMMENT '系列名称',
+    qty_before INT DEFAULT 0 COMMENT '迁移前数量',
+    qty_after INT DEFAULT 0 COMMENT '迁移后数量',
+    qty_transferred INT DEFAULT 0 COMMENT '转移数量',
+    qty_lost INT DEFAULT 0 COMMENT '丢失数量',
+    transfer_status VARCHAR(32) DEFAULT 'PENDING' COMMENT '转移状态: PENDING-待转移, COMPLETE-全部转移, PARTIAL-部分转移',
+    remark VARCHAR(255) COMMENT '备注',
+    created_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted TINYINT DEFAULT 0,
+    INDEX idx_migration_id (migration_id),
+    INDEX idx_sku_id (sku_id),
+    INDEX idx_series_id (series_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='迁移库存明细表';
+
+-- 初始化卡货处理记录数据
+INSERT INTO stuck_handle_record (id, record_no, ticket_id, ticket_no, order_id, order_no, machine_id, machine_code, grid_no, sku_id, sku_name, pay_flow_checked, motor_status_checked, sensor_status_checked, inventory_change_checked, monitor_photo_checked, check_remark, handle_decision, refund_amount, status, cs_handler_id, handle_time) VALUES
+(1, 'SH20240115001', 1, 'TK20240115001', 3, 'PO2024011500003', 2, 'BXM-0002', 25, 10, '通信员', 'NORMAL', 'FAULT', 'NORMAL', 'NORMAL', 'ABNORMAL', '经核查，电机故障导致卡货，监控显示商品未掉落，用户反馈属实。', 'REPAIR', NULL, 'PENDING_REPAIR', 5, '2024-01-15 15:30:00');
+
+-- 初始化点位迁移记录数据
+INSERT INTO machine_migration (id, migration_no, machine_id, machine_code, machine_name, old_mall_id, old_mall_name, old_location_detail, old_commission_rate, new_mall_id, new_mall_name, new_location_detail, new_commission_rate, migration_reason, migration_start_time, downtime_minutes, downtime_loss, loss_remark, total_inventory_before, inventory_transfer_status, status, operator_id, operator_name, created_time) VALUES
+(1, 'MM20240115001', 3, 'BXM-0003', '万达1号机', 2, '万达广场', '2楼童装区', 12.00, 1, '万象城购物中心', 'B1层超市入口旁', 15.00, 'FLOOR_ADJUST', '2024-01-16 08:00:00', 240, 500.00, '预计4小时停机，约影响500元销售额', 0, 'PENDING', 'IN_PROGRESS', 1, '运营管理员', '2024-01-15 16:00:00');
